@@ -82,7 +82,7 @@ export const PEOPLE_DATA: Category[] = [
       { name: "董晶艺", background: "你好，小艺。" },
       { name: "巫玉洁", background: "你好，小巫。" },
       { name: "赵心蕊", background: "你好，4心，要幸福呀。" },
-      { name: "陆步", background: "步哥，眼看你越来越牛，作品越来越棒，真心感到敬佩！谢谢陆哥曾经带我经历过一段难忘的时光！" }
+      { name: "陆步", background: "步哥，眼看你越来越牛，作品越来越棒，真心感到敬佩！谢谢陆哥曾经带我经历过一段难忘的时光！" },
       { name: "郑丽君", background: "司令官！问好，你现在也是老师啦哈哈哈respect！希望早日听到你的好消息～" }
     ]
   },
