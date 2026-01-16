@@ -102,8 +102,11 @@ const Gallery: React.FC<GalleryProps> = ({ onSelect, selectedId, lang }) => {
         ))}
       </div>
 
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none -z-10 opacity-[0.012]">
-        <h2 className="text-[40vw] font-serif italic select-none leading-none tracking-tighter mix-blend-diff">
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none -z-10 opacity-[0.05]">
+        <h2 
+          className="text-[40vw] font-serif italic select-none leading-none tracking-tighter mix-blend-diff text-transparent"
+          style={{ WebkitTextStroke: '1px currentColor' }}
+        >
           30
         </h2>
       </div>

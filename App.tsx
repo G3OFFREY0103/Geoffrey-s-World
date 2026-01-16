@@ -18,30 +18,26 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<Theme>('dark');
   const [lang, setLang] = useState<Language>('zh');
   
-  // Animation state for "Breathing" cycle
-  // Cycle: 2s Active (Breathing + Glitching), 3s Static (No movement)
+  // Animation state for "Chaos" cycle
+  // Cycle: 2.5s Active (Extreme Chaos), 4s Static (Clarity)
   const [isBreathing, setIsBreathing] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
 
     const runCycle = () => {
-      // Start Breathing (Active for 2s)
       setIsBreathing(true);
       
-      // Stop Breathing after 2s
       setTimeout(() => {
         setIsBreathing(false);
-      }, 2000);
+      }, 2500); // Chaos lasts 2.5s
     };
 
-    // Initial run after a small delay to sync with entrance
     const startTimeout = setTimeout(() => {
       runCycle();
-      // Schedule loop every 5s (2s active + 3s static)
-      const interval = setInterval(runCycle, 5000);
+      const interval = setInterval(runCycle, 6500); // Loop every 6.5s
       return () => clearInterval(interval);
-    }, 2500);
+    }, 1500);
 
     return () => clearTimeout(startTimeout);
   }, [isLoading]);
@@ -100,7 +96,7 @@ const App: React.FC = () => {
         onToggleTheme={toggleTheme} 
       />
       
-      {/* Adjusted height and padding for mobile to move title up */}
+      {/* Hero Section */}
       <section className="h-[75vh] md:h-[120vh] flex flex-col items-center justify-start pt-[35vh] md:justify-center md:pt-0 px-12 pointer-events-none relative overflow-hidden">
         <motion.div
           style={{ y: titleY }}
@@ -109,42 +105,31 @@ const App: React.FC = () => {
           transition={{ duration: 2, ease: [0.16, 1, 0.3, 1] }}
           className="text-center z-10 flex flex-col items-center"
         >
+          {/* Main Title Container */}
           <motion.div
-            initial={{ scale: 1.1, filter: 'blur(10px)' }}
-            animate={{ scale: 1, filter: 'blur(0px)' }}
-            transition={{ duration: 2.5, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col items-center"
+            animate={isBreathing ? {
+              scale: [1, 1.05, 1], // Subtle global scale
+            } : {
+              scale: 1,
+            }}
+            transition={{
+              duration: isBreathing ? 2.5 : 0.5,
+              ease: "easeInOut",
+            }}
+            className="flex flex-col items-center relative"
           >
             {/* 
-              Controlled Breathing Animation Wrapper
-              Active Phase (2s): Scale 1 -> 1.05 -> 1, Blur 0 -> 2px -> 0
-              Static Phase (3s): Scale 1, Blur 0
+              We pass the styling classes INTO the component so it can manipulate them.
+              font-serif is the base state. The component will swap to font-mono randomly.
             */}
-            <motion.div
-              animate={isBreathing ? {
-                scale: [1, 1.03, 1],
-                filter: ["blur(0px)", "blur(2px)", "blur(0px)"],
-              } : {
-                scale: 1,
-                filter: "blur(0px)",
-              }}
-              transition={{
-                duration: isBreathing ? 2 : 0, // 2s duration when active, instant reset/hold when not
-                ease: "easeInOut",
-              }}
-              className="flex flex-col items-center"
-            >
-              {t.heroTitle.split('\n').map((line, i) => (
-                <GlitchText 
-                  key={i}
-                  text={line}
-                  enableGlitch={isBreathing} // Only glitch during the breathing phase
-                  className="text-[10vw] md:text-[12vw] font-serif font-light leading-[0.85] tracking-tighter text-current block uppercase"
-                />
-              ))}
-            </motion.div>
+            <GlitchText 
+              text={t.heroTitle}
+              enableGlitch={isBreathing} 
+              className="text-[10vw] md:text-[12vw] font-serif font-light leading-[0.85] tracking-tighter text-current uppercase"
+            />
           </motion.div>
           
+          {/* Subtitle */}
           {t.subtitle && (
             <motion.div 
               style={{ x: subtitleX }}
@@ -152,7 +137,7 @@ const App: React.FC = () => {
             >
               <GlitchText 
                 text={t.subtitle}
-                // Subtitle can have independent random glitching (or sync if desired, keeping random for variety)
+                enableGlitch={isBreathing}
                 className="text-[5vw] md:text-[6vw] font-serif font-light leading-[0.8] italic tracking-[0.2em] text-current block opacity-80"
               />
             </motion.div>
@@ -162,7 +147,6 @@ const App: React.FC = () => {
 
       <Gallery 
         onSelect={(item) => setSelectedItem(item)} 
-        // Use selectedItem?.id instead of undefined selectedId
         selectedId={selectedItem?.id ?? null} 
         lang={lang}
       />
@@ -171,7 +155,6 @@ const App: React.FC = () => {
       
       <Footer lang={lang} />
 
-      {/* Pass allowAutoplay prop to enable music after user interaction */}
       <MusicPlayer lang={lang} theme={theme} allowAutoplay={!isLoading} />
 
       <AnimatePresence>

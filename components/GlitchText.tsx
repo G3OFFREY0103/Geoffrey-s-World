@@ -1,83 +1,163 @@
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 
 const GLYPHS = '01_[]/X*&|ΔΣΘΦΨΩαβγδεζηθικλμνξοπρστυφχψω';
+const COLORS = [
+  '#ffffff', '#ffffff', '#ffffff', '#ffffff', // High weight for white
+  '#ff0055', // Cyber Red
+  '#00f0ff', // Cyber Cyan
+  '#ccff00'  // Cyber Yellow
+];
 
-const GlitchLetter: React.FC<{ char: string; enableGlitch: boolean }> = ({ char, enableGlitch }) => {
+interface GlitchCharProps {
+  char: string;
+  enableGlitch: boolean;
+  baseClassName?: string;
+  mouseX: any; // MotionValue<number>
+  mouseY: any; // MotionValue<number>
+}
+
+const GlitchChar: React.FC<GlitchCharProps> = ({ char, enableGlitch, baseClassName, mouseX, mouseY }) => {
   const [displayChar, setDisplayChar] = useState(char);
-  const [isGlitching, setIsGlitching] = useState(false);
+  const [style, setStyle] = useState<React.CSSProperties>({});
+  const [className, setClassName] = useState(baseClassName || '');
+  const ref = useRef<HTMLSpanElement>(null);
+  
+  // Physics state
+  // Store center position in a ref to access it inside useTransform without triggering re-renders
+  const centerRef = useRef({ x: 0, y: 0 });
+
+  // Update position on mount, resize, and scroll (debounced/throttled conceptually by usage)
+  // We use a simple listener here. For a production app with hundreds of chars, we'd use a shared observer.
+  useEffect(() => {
+    const updatePosition = () => {
+      if (ref.current) {
+        const rect = ref.current.getBoundingClientRect();
+        centerRef.current = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, { capture: true, passive: true });
+    
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition);
+    };
+  }, []);
+
+  // Physics Logic
+  // Calculate distance and direction from mouse to char center
+  const physicsX = useTransform([mouseX, mouseY], ([mx, my]) => {
+    const cx = centerRef.current.x;
+    const cy = centerRef.current.y;
+    const dx = cx - (mx as number);
+    const dy = cy - (my as number);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    const radius = 250; // Increased radius to detect mouse earlier
+    if (dist < radius) {
+      const force = (radius - dist) / radius; // 0 to 1 (1 is center)
+      // Explode OUTWARDS.
+      const strength = 800; // Drastically increased strength for "Explosion"
+      return dx * force * force * (strength / radius) * 8; 
+    }
+    return 0;
+  });
+
+  const physicsY = useTransform([mouseX, mouseY], ([mx, my]) => {
+    const cx = centerRef.current.x;
+    const cy = centerRef.current.y;
+    const dx = cx - (mx as number);
+    const dy = cy - (my as number);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    const radius = 250;
+    if (dist < radius) {
+      const force = (radius - dist) / radius;
+      const strength = 800;
+      return dy * force * force * (strength / radius) * 8;
+    }
+    return 0;
+  });
+  
+  // Increased rotation for more chaos
+  const physicsRotate = useTransform(physicsX, (val) => (val as number) * 0.4);
+
+  // Smooth out the physics with a spring
+  // Reduced stiffness for slower return (floatier feel)
+  const springConfig = { stiffness: 80, damping: 15, mass: 1.2 };
+  const x = useSpring(physicsX, springConfig);
+  const y = useSpring(physicsY, springConfig);
+  const rotate = useSpring(physicsRotate, springConfig);
+
+  // Glitch Effect Logic
+  const originalState = useRef({
+    char,
+    style: {},
+    className: baseClassName || ''
+  });
 
   useEffect(() => {
     let timeoutId: any;
-    let cycleInterval: any;
     
-    const triggerGlitch = () => {
-      // If globally disabled, stop.
+    const chaoticUpdate = () => {
       if (!enableGlitch) return;
 
-      // Randomly decide when to glitch (between 2 to 7 seconds)
-      const nextGlitch = Math.random() * 5000 + 2000;
+      const shouldSwapChar = Math.random() > 0.7;
+      const newChar = shouldSwapChar ? GLYPHS[Math.floor(Math.random() * GLYPHS.length)] : char;
+      const newColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+      const blurAmount = Math.random() > 0.8 ? Math.random() * 4 : 0;
+      const isStroke = Math.random() > 0.85;
+
+      const newStyle: React.CSSProperties = {
+        color: isStroke ? 'transparent' : newColor,
+        WebkitTextStroke: isStroke ? `1px ${newColor}` : 'unset',
+        filter: `blur(${blurAmount}px)`,
+        // Removed transform from here to let physics control position
+      };
+
+      const isMono = Math.random() > 0.7;
+      const isItalic = Math.random() > 0.6;
+      const isBold = Math.random() > 0.6;
       
-      timeoutId = setTimeout(() => {
-        // Double check if still enabled before starting glitch sequence
-        if (!enableGlitch) return;
+      let newClass = baseClassName || '';
+      if (isMono) newClass = newClass.replace('font-serif', 'font-mono');
+      if (isItalic) newClass += ' italic';
+      if (isBold) newClass += ' font-bold';
 
-        setIsGlitching(true);
-        
-        // Rapidly cycle characters during glitch duration (150-400ms)
-        const glitchDuration = Math.random() * 250 + 150;
-        cycleInterval = setInterval(() => {
-          setDisplayChar(GLYPHS[Math.floor(Math.random() * GLYPHS.length)]);
-        }, 40);
+      setDisplayChar(newChar);
+      setStyle(newStyle);
+      setClassName(newClass);
 
-        setTimeout(() => {
-          clearInterval(cycleInterval);
-          setDisplayChar(char);
-          setIsGlitching(false);
-          // Recursively trigger next glitch if still enabled
-          if (enableGlitch) triggerGlitch();
-        }, glitchDuration);
-        
-      }, nextGlitch);
+      timeoutId = setTimeout(chaoticUpdate, Math.random() * 200 + 50);
     };
 
-    if (char !== ' ') {
-      if (enableGlitch) {
-        triggerGlitch();
-      } else {
-        // Reset if disabled
-        setDisplayChar(char);
-        setIsGlitching(false);
-      }
+    if (enableGlitch) {
+      chaoticUpdate();
+    } else {
+      setDisplayChar(originalState.current.char);
+      setStyle(originalState.current.style);
+      setClassName(originalState.current.className);
     }
-    
-    return () => {
-      clearTimeout(timeoutId);
-      clearInterval(cycleInterval);
-    };
-  }, [char, enableGlitch]);
+
+    return () => clearTimeout(timeoutId);
+  }, [char, enableGlitch, baseClassName]);
+
+  if (char === ' ') return <span className="inline-block w-[0.2em]">&nbsp;</span>;
+  if (char === '\n') return <br />;
 
   return (
     <motion.span
-      className="inline-block relative"
-      animate={isGlitching ? {
-        x: [0, -2, 2, -1, 0],
-        opacity: [1, 0.7, 1, 0.8, 1],
-        filter: ['blur(0px)', 'blur(2px)', 'blur(0px)']
-      } : {}}
-      transition={{ duration: 0.2, repeat: isGlitching ? Infinity : 0 }}
+      ref={ref}
+      style={{ x, y, rotate, display: 'inline-block', transformOrigin: 'center' }}
+      className="relative"
     >
-      {displayChar}
-      {isGlitching && (
-        <motion.span 
-          className="absolute inset-0 opacity-30 select-none pointer-events-none"
-          animate={{ x: [-5, 5, 0], y: [2, -2, 0] }}
-          transition={{ duration: 0.1, repeat: Infinity }}
-        >
-          {displayChar}
-        </motion.span>
-      )}
+      <span className={`inline-block transition-colors duration-100 ${className}`} style={style}>
+        {displayChar}
+      </span>
     </motion.span>
   );
 };
@@ -89,10 +169,30 @@ interface GlitchTextProps {
 }
 
 const GlitchText: React.FC<GlitchTextProps> = ({ text, className, enableGlitch = true }) => {
+  const mouseX = useMotionValue(-1000);
+  const mouseY = useMotionValue(-1000);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      mouseX.set(e.clientX);
+      mouseY.set(e.clientY);
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
   return (
-    <span className={className}>
+    <span className="inline-block whitespace-pre-wrap text-center">
       {text.split('').map((char, i) => (
-        <GlitchLetter key={`${char}-${i}`} char={char} enableGlitch={enableGlitch} />
+        <GlitchChar 
+          key={`${i}-${char}`} 
+          char={char} 
+          enableGlitch={enableGlitch}
+          baseClassName={className}
+          mouseX={mouseX}
+          mouseY={mouseY}
+        />
       ))}
     </span>
   );
