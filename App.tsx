@@ -171,7 +171,8 @@ const App: React.FC = () => {
       
       <Footer lang={lang} />
 
-      <MusicPlayer lang={lang} theme={theme} />
+      {/* Pass allowAutoplay prop to enable music after user interaction */}
+      <MusicPlayer lang={lang} theme={theme} allowAutoplay={!isLoading} />
 
       <AnimatePresence>
         {selectedItem && (
