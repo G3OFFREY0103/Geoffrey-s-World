@@ -22,20 +22,27 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ lang, theme, allowAutoplay })
   // Effect: Initialize Audio
   useEffect(() => {
     // Initialize audio with the initially selected random song
-    audioRef.current = new Audio(SONGS[currentIndex].url);
-    audioRef.current.volume = 0.5;
+    // Optimization: Create audio object and force preload
+    const audio = new Audio();
+    audio.src = SONGS[currentIndex].url;
+    audio.volume = 0.5;
+    audio.preload = 'auto'; // Tell browser to download immediately
+    
+    audioRef.current = audio;
+    
+    // Explicitly call load() to start buffering immediately when component mounts
+    // This happens while Preloader is still visible
+    audio.load();
     
     const handleEnded = () => {
        nextTrack();
     };
 
-    audioRef.current.addEventListener('ended', handleEnded);
+    audio.addEventListener('ended', handleEnded);
 
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.removeEventListener('ended', handleEnded);
-      }
+      audio.pause();
+      audio.removeEventListener('ended', handleEnded);
     };
   }, []); // Runs once on mount
 
@@ -72,6 +79,9 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ lang, theme, allowAutoplay })
       if (audioRef.current.src !== SONGS[currentIndex].url) {
         const wasPlaying = isPlaying;
         audioRef.current.src = SONGS[currentIndex].url;
+        audioRef.current.preload = 'auto'; // Optimization for next tracks
+        audioRef.current.load(); // Optimization force load
+        
         if (wasPlaying) {
           const playPromise = audioRef.current.play();
           if (playPromise !== undefined) {
