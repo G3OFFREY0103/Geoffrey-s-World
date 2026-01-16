@@ -187,7 +187,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ lang, theme, allowAutoplay })
                   onClick={nextTrack}
                   className="text-[10px] uppercase tracking-[0.2em] hover:opacity-50 transition-opacity font-mono"
                 >
-                  {t.playerNext} ->
+                  {t.playerNext} {'->'}
                 </button>
               </div>
             </div>
