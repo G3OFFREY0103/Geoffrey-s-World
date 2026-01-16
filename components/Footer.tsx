@@ -24,7 +24,7 @@ const Footer: React.FC<{ lang: Language }> = ({ lang }) => {
       </div>
       
       <div className="mt-20 flex justify-between text-[9px] uppercase tracking-widest opacity-30">
-        <p>© 2025 GEOFFREY'S WORLD</p>
+        <p>© 2026 GEOFFREY'S WORLD</p>
         <p>{t.built}</p>
       </div>
     </footer>
