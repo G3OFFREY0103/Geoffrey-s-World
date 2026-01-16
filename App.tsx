@@ -18,8 +18,6 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<Theme>('dark');
   const [lang, setLang] = useState<Language>('zh');
   
-  // Animation state for "Chaos" cycle
-  // Cycle: 2.5s Active (Extreme Chaos), 4s Static (Clarity)
   const [isBreathing, setIsBreathing] = useState(false);
 
   useEffect(() => {
@@ -30,12 +28,12 @@ const App: React.FC = () => {
       
       setTimeout(() => {
         setIsBreathing(false);
-      }, 2500); // Chaos lasts 2.5s
+      }, 2500); 
     };
 
     const startTimeout = setTimeout(() => {
       runCycle();
-      const interval = setInterval(runCycle, 6500); // Loop every 6.5s
+      const interval = setInterval(runCycle, 6500); 
       return () => clearInterval(interval);
     }, 1500);
 
@@ -105,31 +103,20 @@ const App: React.FC = () => {
           transition={{ duration: 2, ease: [0.16, 1, 0.3, 1] }}
           className="text-center z-10 flex flex-col items-center"
         >
-          {/* Main Title Container */}
           <motion.div
-            animate={isBreathing ? {
-              scale: [1, 1.05, 1], // Subtle global scale
-            } : {
-              scale: 1,
-            }}
-            transition={{
-              duration: isBreathing ? 2.5 : 0.5,
-              ease: "easeInOut",
-            }}
+            animate={isBreathing ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+            transition={{ duration: isBreathing ? 2.5 : 0.5, ease: "easeInOut" }}
             className="flex flex-col items-center relative"
           >
-            {/* 
-              We pass the styling classes INTO the component so it can manipulate them.
-              font-serif is the base state. The component will swap to font-mono randomly.
-            */}
-            <GlitchText 
-              text={t.heroTitle}
-              enableGlitch={isBreathing} 
-              className="text-[10vw] md:text-[12vw] font-serif font-light leading-[0.85] tracking-tighter text-current uppercase"
-            />
+            <div className="relative flex items-center justify-center">
+              <GlitchText 
+                text={t.heroTitle}
+                enableGlitch={isBreathing} 
+                className="text-[15vw] md:text-[12vw] font-serif font-light leading-[0.85] tracking-tighter text-current uppercase"
+              />
+            </div>
           </motion.div>
           
-          {/* Subtitle */}
           {t.subtitle && (
             <motion.div 
               style={{ x: subtitleX }}

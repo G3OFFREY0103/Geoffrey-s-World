@@ -1,35 +1,31 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 
 const GLYPHS = '01_[]/X*&|ΔΣΘΦΨΩαβγδεζηθικλμνξοπρστυφχψω';
 const COLORS = [
-  '#ffffff', '#ffffff', '#ffffff', '#ffffff', // High weight for white
-  '#ff0055', // Cyber Red
-  '#00f0ff', // Cyber Cyan
-  '#ccff00'  // Cyber Yellow
+  '#ffffff', '#ffffff', '#ffffff', '#ffffff', 
+  '#ff0055', 
+  '#00f0ff', 
+  '#ccff00'  
 ];
 
 interface GlitchCharProps {
   char: string;
   enableGlitch: boolean;
   baseClassName?: string;
-  mouseX: any; // MotionValue<number>
-  mouseY: any; // MotionValue<number>
+  mouseX: any; 
+  mouseY: any;
+  isTouchDevice: boolean;
 }
 
-const GlitchChar: React.FC<GlitchCharProps> = ({ char, enableGlitch, baseClassName, mouseX, mouseY }) => {
+const GlitchChar: React.FC<GlitchCharProps> = ({ char, enableGlitch, baseClassName, mouseX, mouseY, isTouchDevice }) => {
   const [displayChar, setDisplayChar] = useState(char);
   const [style, setStyle] = useState<React.CSSProperties>({});
   const [className, setClassName] = useState(baseClassName || '');
   const ref = useRef<HTMLSpanElement>(null);
-  
-  // Physics state
-  // Store center position in a ref to access it inside useTransform without triggering re-renders
   const centerRef = useRef({ x: 0, y: 0 });
 
-  // Update position on mount, resize, and scroll (debounced/throttled conceptually by usage)
-  // We use a simple listener here. For a production app with hundreds of chars, we'd use a shared observer.
   useEffect(() => {
     const updatePosition = () => {
       if (ref.current) {
@@ -48,28 +44,39 @@ const GlitchChar: React.FC<GlitchCharProps> = ({ char, enableGlitch, baseClassNa
     };
   }, []);
 
-  // Physics Logic
-  // Calculate distance and direction from mouse to char center
   const physicsX = useTransform([mouseX, mouseY], ([mx, my]) => {
+    // Strictly disable on touch/mobile
+    if (isTouchDevice) return 0;
+    
     const cx = centerRef.current.x;
     const cy = centerRef.current.y;
+    
+    // If mouse is default far away, skip calc
+    if ((mx as number) < -5000) return 0;
+
     const dx = cx - (mx as number);
     const dy = cy - (my as number);
     const dist = Math.sqrt(dx * dx + dy * dy);
     
-    const radius = 250; // Increased radius to detect mouse earlier
+    const radius = 250; 
     if (dist < radius) {
-      const force = (radius - dist) / radius; // 0 to 1 (1 is center)
-      // Explode OUTWARDS.
-      const strength = 800; // Drastically increased strength for "Explosion"
+      const force = (radius - dist) / radius;
+      const strength = 800;
       return dx * force * force * (strength / radius) * 8; 
     }
     return 0;
   });
 
   const physicsY = useTransform([mouseX, mouseY], ([mx, my]) => {
+    // Strictly disable on touch/mobile
+    if (isTouchDevice) return 0;
+
     const cx = centerRef.current.x;
     const cy = centerRef.current.y;
+
+    // If mouse is default far away, skip calc
+    if ((mx as number) < -5000) return 0;
+
     const dx = cx - (mx as number);
     const dy = cy - (my as number);
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -83,17 +90,13 @@ const GlitchChar: React.FC<GlitchCharProps> = ({ char, enableGlitch, baseClassNa
     return 0;
   });
   
-  // Increased rotation for more chaos
   const physicsRotate = useTransform(physicsX, (val) => (val as number) * 0.4);
 
-  // Smooth out the physics with a spring
-  // Reduced stiffness for slower return (floatier feel)
   const springConfig = { stiffness: 80, damping: 15, mass: 1.2 };
   const x = useSpring(physicsX, springConfig);
   const y = useSpring(physicsY, springConfig);
   const rotate = useSpring(physicsRotate, springConfig);
 
-  // Glitch Effect Logic
   const originalState = useRef({
     char,
     style: {},
@@ -116,7 +119,6 @@ const GlitchChar: React.FC<GlitchCharProps> = ({ char, enableGlitch, baseClassNa
         color: isStroke ? 'transparent' : newColor,
         WebkitTextStroke: isStroke ? `1px ${newColor}` : 'unset',
         filter: `blur(${blurAmount}px)`,
-        // Removed transform from here to let physics control position
       };
 
       const isMono = Math.random() > 0.7;
@@ -169,17 +171,45 @@ interface GlitchTextProps {
 }
 
 const GlitchText: React.FC<GlitchTextProps> = ({ text, className, enableGlitch = true }) => {
-  const mouseX = useMotionValue(-1000);
-  const mouseY = useMotionValue(-1000);
+  // Initialize very far away to ensure no physics interaction by default
+  const mouseX = useMotionValue(-10000);
+  const mouseY = useMotionValue(-10000);
+  
+  // Default to false, but we'll set it immediately in effect
+  const [isTouch, setIsTouch] = useState(false);
 
   useEffect(() => {
+    const checkIsMobile = () => {
+      // Robust detection: < 1024px (Tablets/Mobile) OR Coarse Pointer
+      const isSmallScreen = window.innerWidth < 1024;
+      const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+      
+      const isMobile = isSmallScreen || isCoarse;
+      setIsTouch(isMobile);
+      
+      // If mobile, ensure mouse values are reset to non-interacting values
+      if (isMobile) {
+        mouseX.set(-10000);
+        mouseY.set(-10000);
+      }
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+
     const handleMouseMove = (e: MouseEvent) => {
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
+      // Re-check condition to be safe inside the listener
+      if (window.innerWidth >= 1024 && !window.matchMedia('(pointer: coarse)').matches) {
+        mouseX.set(e.clientX);
+        mouseY.set(e.clientY);
+      }
     };
     
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', checkIsMobile);
+    };
   }, []);
 
   return (
@@ -192,6 +222,7 @@ const GlitchText: React.FC<GlitchTextProps> = ({ text, className, enableGlitch =
           baseClassName={className}
           mouseX={mouseX}
           mouseY={mouseY}
+          isTouchDevice={isTouch}
         />
       ))}
     </span>
